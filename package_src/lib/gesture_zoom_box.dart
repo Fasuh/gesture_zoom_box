@@ -25,6 +25,8 @@ class GestureZoomBox extends StatefulWidget {
   final double maxScale;
   final double doubleTapScale;
   final Widget child;
+  final bool allowDrag;
+  final bool runAnimations;
   final VoidCallback onPressed;
   final Duration duration;
 
@@ -33,11 +35,15 @@ class GestureZoomBox extends StatefulWidget {
     Key key,
     this.maxScale = 5.0,
     this.doubleTapScale = 2.0,
+    this.allowDrag = true,
+    this.runAnimations = true,
     @required this.child,
     this.onPressed,
     this.duration = const Duration(milliseconds: 200),
   })  : assert(maxScale >= 1.0),
         assert(doubleTapScale >= 1.0 && doubleTapScale <= maxScale),
+        assert(allowDrag != null),
+        assert(runAnimations != null),
         super(key: key);
 
   @override
@@ -131,7 +137,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
     setState(() {
       if (details.scale != 1.0) {
         _scaling(details);
-      } else {
+      } else if (widget.allowDrag) {
         _dragging(details);
       }
     });
@@ -147,18 +153,24 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
       _latestScaleUpdateDetails = details;
       return;
     }
-
     // 计算缩放比例
     double scaleIncrement = details.scale - _latestScaleUpdateDetails.scale;
     if (details.scale < 1.0 && _scale > 1.0) {
       scaleIncrement *= _scale;
     }
     if (_scale < 1.0 && scaleIncrement < 0) {
+      if(!widget.runAnimations) {
+        return;
+      }
       scaleIncrement *= (_scale - 0.5);
     } else if (_scale > widget.maxScale && scaleIncrement > 0) {
       scaleIncrement *= (2.0 - (_scale - widget.maxScale));
     }
     _scale = max(_scale + scaleIncrement, 0.0);
+    if(!widget.runAnimations && (_scale < 1.0 || _scale > 5.0)) {
+      _scale = _scale.clamp(1.0, 5.0);
+      return;
+    }
 
     // 计算缩放后偏移前（缩放前后的内容中心对齐）的左上角坐标变化
     double scaleOffsetX = context.size.width * (_scale - 1.0) / 2;

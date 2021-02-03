@@ -18,6 +18,8 @@ class _BigImagePageState extends State<BigImagePage> {
     return Center(
       child: GestureZoomBox(
         maxScale: 5.0,
+        allowDrag: false,
+        runAnimations: false,
         doubleTapScale: 2.0,
         onPressed: () => Navigator.pop(context),
         child: Image.asset(widget.imageUrl),
