@@ -29,6 +29,7 @@ class GestureZoomBox extends StatefulWidget {
   final bool runAnimations;
   final VoidCallback onPressed;
   final Duration duration;
+  final Function(Offset) onOffsetChange;
 
   /// 通过最大缩放比例 [maxScale]、双击缩放比例 [doubleTapScale]、子部件 [child]、点击事件 [onPressed] 创建小部件
   const GestureZoomBox({
@@ -39,6 +40,7 @@ class GestureZoomBox extends StatefulWidget {
     this.runAnimations = true,
     @required this.child,
     this.onPressed,
+    this.onOffsetChange,
     this.duration = const Duration(milliseconds: 200),
   })  : assert(maxScale >= 1.0),
         assert(doubleTapScale >= 1.0 && doubleTapScale <= maxScale),
@@ -68,6 +70,13 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
   // 当前偏移值
   Offset _offset = Offset.zero;
 
+  set offset(Offset offset) {
+    _offset = offset;
+    widget.onOffsetChange?.call(offset);
+  }
+
+  Offset get offset => _offset;
+
   // 双击缩放的点击位置
   Offset _doubleTapPosition;
 
@@ -87,7 +96,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.identity()
-        ..translate(_offset.dx, _offset.dy)
+        ..translate(offset.dx, offset.dy)
         ..scale(_scale, _scale),
       child: Listener(
         onPointerUp: _onPointerUp,
@@ -176,10 +185,10 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
     double scaleOffsetX = context.size.width * (_scale - 1.0) / 2;
     double scaleOffsetY = context.size.height * (_scale - 1.0) / 2;
     // 将缩放前的触摸点映射到缩放后的内容上
-    double scalePointDX = (details.localFocalPoint.dx + scaleOffsetX - _offset.dx) / _scale;
-    double scalePointDY = (details.localFocalPoint.dy + scaleOffsetY - _offset.dy) / _scale;
+    double scalePointDX = (details.localFocalPoint.dx + scaleOffsetX - offset.dx) / _scale;
+    double scalePointDY = (details.localFocalPoint.dy + scaleOffsetY - offset.dy) / _scale;
     // 计算偏移，使缩放中心在屏幕上的位置保持不变
-    _offset += Offset(
+    offset += Offset(
       (context.size.width / 2 - scalePointDX) * scaleIncrement,
       (context.size.height / 2 - scalePointDY) * scaleIncrement,
     );
@@ -207,22 +216,22 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
     double scaleOffsetX = context.size.width * (_scale - 1.0) / 2;
     if (scaleOffsetX <= 0) {
       offsetXIncrement = 0;
-    } else if (_offset.dx > scaleOffsetX) {
-      offsetXIncrement *= (_maxDragOver - (_offset.dx - scaleOffsetX)) / _maxDragOver;
-    } else if (_offset.dx < -scaleOffsetX) {
-      offsetXIncrement *= (_maxDragOver - (-scaleOffsetX - _offset.dx)) / _maxDragOver;
+    } else if (offset.dx > scaleOffsetX) {
+      offsetXIncrement *= (_maxDragOver - (offset.dx - scaleOffsetX)) / _maxDragOver;
+    } else if (offset.dx < -scaleOffsetX) {
+      offsetXIncrement *= (_maxDragOver - (-scaleOffsetX - offset.dx)) / _maxDragOver;
     }
     // 处理 Y 轴边界
     double scaleOffsetY = (context.size.height * _scale - MediaQuery.of(context).size.height) / 2;
     if (scaleOffsetY <= 0) {
       offsetYIncrement = 0;
-    } else if (_offset.dy > scaleOffsetY) {
-      offsetYIncrement *= (_maxDragOver - (_offset.dy - scaleOffsetY)) / _maxDragOver;
-    } else if (_offset.dy < -scaleOffsetY) {
-      offsetYIncrement *= (_maxDragOver - (-scaleOffsetY - _offset.dy)) / _maxDragOver;
+    } else if (offset.dy > scaleOffsetY) {
+      offsetYIncrement *= (_maxDragOver - (offset.dy - scaleOffsetY)) / _maxDragOver;
+    } else if (offset.dy < -scaleOffsetY) {
+      offsetYIncrement *= (_maxDragOver - (-scaleOffsetY - offset.dy)) / _maxDragOver;
     }
 
-    _offset += Offset(offsetXIncrement, offsetYIncrement);
+    offset += Offset(offsetXIncrement, offsetYIncrement);
 
     _latestScaleUpdateDetails = details;
   }
@@ -242,14 +251,14 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
     } else if (_isDragging) {
       // 处理拖动超过边界的情况（自动回弹到边界）
       double realScale = _scale > widget.maxScale ? widget.maxScale : _scale;
-      double targetOffsetX = _offset.dx, targetOffsetY = _offset.dy;
+      double targetOffsetX = offset.dx, targetOffsetY = offset.dy;
       // 处理 X 轴边界
       double scaleOffsetX = context.size.width * (realScale - 1.0) / 2;
       if (scaleOffsetX <= 0) {
         targetOffsetX = 0;
-      } else if (_offset.dx > scaleOffsetX) {
+      } else if (offset.dx > scaleOffsetX) {
         targetOffsetX = scaleOffsetX;
-      } else if (_offset.dx < -scaleOffsetX) {
+      } else if (offset.dx < -scaleOffsetX) {
         targetOffsetX = -scaleOffsetX;
       }
       // 处理 Y 轴边界
@@ -257,18 +266,18 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
           (context.size.height * realScale - MediaQuery.of(context).size.height) / 2;
       if (scaleOffsetY < 0) {
         targetOffsetY = 0;
-      } else if (_offset.dy > scaleOffsetY) {
+      } else if (offset.dy > scaleOffsetY) {
         targetOffsetY = scaleOffsetY;
-      } else if (_offset.dy < -scaleOffsetY) {
+      } else if (offset.dy < -scaleOffsetY) {
         targetOffsetY = -scaleOffsetY;
       }
-      if (_offset.dx != targetOffsetX || _offset.dy != targetOffsetY) {
+      if (offset.dx != targetOffsetX || offset.dy != targetOffsetY) {
         // 启动越界回弹
         _animationOffset(Offset(targetOffsetX, targetOffsetY));
       } else {
         // 处理 X 轴边界
         double duration = (widget.duration.inSeconds + widget.duration.inMilliseconds / 1000);
-        Offset targetOffset = _offset + details.velocity.pixelsPerSecond * duration;
+        Offset targetOffset = offset + details.velocity.pixelsPerSecond * duration;
         targetOffsetX = targetOffset.dx;
         if (targetOffsetX > scaleOffsetX) {
           targetOffsetX = scaleOffsetX;
@@ -320,10 +329,10 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
   _animationOffset(Offset targetOffset) {
     _offsetAnimController?.dispose();
     _offsetAnimController = AnimationController(vsync: this, duration: widget.duration);
-    Animation anim = _offsetAnimController.drive(Tween<Offset>(begin: _offset, end: targetOffset));
+    Animation anim = _offsetAnimController.drive(Tween<Offset>(begin: offset, end: targetOffset));
     anim.addListener(() {
       setState(() {
-        _offset = anim.value;
+        offset = anim.value;
       });
     });
     _offsetAnimController.fling();
