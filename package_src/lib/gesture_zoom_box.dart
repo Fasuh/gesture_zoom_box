@@ -30,6 +30,7 @@ class GestureZoomBox extends StatefulWidget {
   final VoidCallback onPressed;
   final Duration duration;
   final Function(Offset) onOffsetChange;
+  final Function(double) onScale;
 
   /// 通过最大缩放比例 [maxScale]、双击缩放比例 [doubleTapScale]、子部件 [child]、点击事件 [onPressed] 创建小部件
   const GestureZoomBox({
@@ -41,6 +42,7 @@ class GestureZoomBox extends StatefulWidget {
     @required this.child,
     this.onPressed,
     this.onOffsetChange,
+    this.onScale,
     this.duration = const Duration(milliseconds: 200),
   })  : assert(maxScale >= 1.0),
         assert(doubleTapScale >= 1.0 && doubleTapScale <= maxScale),
@@ -67,12 +69,19 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
   // 当前缩放值
   double _scale = 1.0;
 
+  double get scale => _scale;
+
+  set scale(double scale) {
+    _scale = scale;
+    widget.onScale?.call(_scale);
+  }
+
   // 当前偏移值
   Offset _offset = Offset.zero;
 
   set offset(Offset offset) {
     _offset = offset;
-    widget.onOffsetChange?.call(offset);
+    widget.onOffsetChange?.call(_offset);
   }
 
   Offset get offset => _offset;
@@ -97,7 +106,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
       alignment: Alignment.center,
       transform: Matrix4.identity()
         ..translate(offset.dx, offset.dy)
-        ..scale(_scale, _scale),
+        ..scale(scale, scale),
       child: Listener(
         onPointerUp: _onPointerUp,
         child: GestureDetector(
@@ -126,7 +135,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
 
   /// 处理双击
   _onDoubleTap() {
-    double targetScale = _scale == 1.0 ? widget.doubleTapScale : 1.0;
+    double targetScale = scale == 1.0 ? widget.doubleTapScale : 1.0;
     _animationScale(targetScale);
     if (targetScale == 1.0) {
       _animationOffset(Offset.zero);
@@ -164,29 +173,29 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
     }
     // 计算缩放比例
     double scaleIncrement = details.scale - _latestScaleUpdateDetails.scale;
-    if (details.scale < 1.0 && _scale > 1.0) {
-      scaleIncrement *= _scale;
+    if (details.scale < 1.0 && scale > 1.0) {
+      scaleIncrement *= scale;
     }
-    if (_scale < 1.0 && scaleIncrement < 0) {
+    if (scale < 1.0 && scaleIncrement < 0) {
       if(!widget.runAnimations) {
         return;
       }
-      scaleIncrement *= (_scale - 0.5);
-    } else if (_scale > widget.maxScale && scaleIncrement > 0) {
-      scaleIncrement *= (2.0 - (_scale - widget.maxScale));
+      scaleIncrement *= (scale - 0.5);
+    } else if (scale > widget.maxScale && scaleIncrement > 0) {
+      scaleIncrement *= (2.0 - (scale - widget.maxScale));
     }
-    _scale = max(_scale + scaleIncrement, 0.0);
-    if(!widget.runAnimations && (_scale < 1.0 || _scale > 5.0)) {
-      _scale = _scale.clamp(1.0, 5.0);
+    scale = max(scale + scaleIncrement, 0.0);
+    if(!widget.runAnimations && (scale < 1.0 || scale > 5.0)) {
+      scale = scale.clamp(1.0, 5.0);
       return;
     }
 
     // 计算缩放后偏移前（缩放前后的内容中心对齐）的左上角坐标变化
-    double scaleOffsetX = context.size.width * (_scale - 1.0) / 2;
-    double scaleOffsetY = context.size.height * (_scale - 1.0) / 2;
+    double scaleOffsetX = context.size.width * (scale - 1.0) / 2;
+    double scaleOffsetY = context.size.height * (scale - 1.0) / 2;
     // 将缩放前的触摸点映射到缩放后的内容上
-    double scalePointDX = (details.localFocalPoint.dx + scaleOffsetX - offset.dx) / _scale;
-    double scalePointDY = (details.localFocalPoint.dy + scaleOffsetY - offset.dy) / _scale;
+    double scalePointDX = (details.localFocalPoint.dx + scaleOffsetX - offset.dx) / scale;
+    double scalePointDY = (details.localFocalPoint.dy + scaleOffsetY - offset.dy) / scale;
     // 计算偏移，使缩放中心在屏幕上的位置保持不变
     offset += Offset(
       (context.size.width / 2 - scalePointDX) * scaleIncrement,
@@ -209,11 +218,11 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
 
     // 计算本次拖动增量
     double offsetXIncrement =
-        (details.localFocalPoint.dx - _latestScaleUpdateDetails.localFocalPoint.dx) * _scale;
+        (details.localFocalPoint.dx - _latestScaleUpdateDetails.localFocalPoint.dx) * scale;
     double offsetYIncrement =
-        (details.localFocalPoint.dy - _latestScaleUpdateDetails.localFocalPoint.dy) * _scale;
+        (details.localFocalPoint.dy - _latestScaleUpdateDetails.localFocalPoint.dy) * scale;
     // 处理 X 轴边界
-    double scaleOffsetX = context.size.width * (_scale - 1.0) / 2;
+    double scaleOffsetX = context.size.width * (scale - 1.0) / 2;
     if (scaleOffsetX <= 0) {
       offsetXIncrement = 0;
     } else if (offset.dx > scaleOffsetX) {
@@ -222,7 +231,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
       offsetXIncrement *= (_maxDragOver - (-scaleOffsetX - offset.dx)) / _maxDragOver;
     }
     // 处理 Y 轴边界
-    double scaleOffsetY = (context.size.height * _scale - MediaQuery.of(context).size.height) / 2;
+    double scaleOffsetY = (context.size.height * scale - MediaQuery.of(context).size.height) / 2;
     if (scaleOffsetY <= 0) {
       offsetYIncrement = 0;
     } else if (offset.dy > scaleOffsetY) {
@@ -238,19 +247,19 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
 
   /// 缩放/拖动结束
   _onScaleEnd(ScaleEndDetails details) {
-    if (_scale < 1.0) {
+    if (scale < 1.0) {
       // 缩放值过小，恢复到 1.0
       _animationScale(1.0);
-    } else if (_scale > widget.maxScale) {
+    } else if (scale > widget.maxScale) {
       // 缩放值过大，恢复到最大值
       _animationScale(widget.maxScale);
     }
-    if (_scale <= 1.0) {
+    if (scale <= 1.0) {
       // 缩放值过小，修改偏移值，使内容居中
       _animationOffset(Offset.zero);
     } else if (_isDragging) {
       // 处理拖动超过边界的情况（自动回弹到边界）
-      double realScale = _scale > widget.maxScale ? widget.maxScale : _scale;
+      double realScale = scale > widget.maxScale ? widget.maxScale : scale;
       double targetOffsetX = offset.dx, targetOffsetY = offset.dy;
       // 处理 X 轴边界
       double scaleOffsetX = context.size.width * (realScale - 1.0) / 2;
@@ -305,7 +314,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
   _animationScale(double targetScale) {
     _scaleAnimController?.dispose();
     _scaleAnimController = AnimationController(vsync: this, duration: widget.duration);
-    Animation anim = Tween<double>(begin: _scale, end: targetScale).animate(_scaleAnimController);
+    Animation anim = Tween<double>(begin: scale, end: targetScale).animate(_scaleAnimController);
     anim.addListener(() {
       setState(() {
         _scaling(ScaleUpdateDetails(
