@@ -15,15 +15,29 @@ class BigImagePage extends StatefulWidget {
 class _BigImagePageState extends State<BigImagePage> {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: GestureZoomBox(
-        maxScale: 5.0,
-        allowDrag: false,
-        runAnimations: false,
-        doubleTapScale: 2.0,
-        onPressed: () => Navigator.pop(context),
-        child: Image.asset(widget.imageUrl),
-      ),
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: GestureZoomBox(
+              maxScale: 5.0,
+              doubleTapScale: 2.0,
+              onPressed: () => Navigator.pop(context),
+              child: Image.asset(widget.imageUrl),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            color: Colors.grey,
+            child: Center(
+              child: Text(
+                'test'
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -99,6 +99,8 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
   // 拖动超出边界的最大值
   double _maxDragOver = 100;
 
+  Size size;
+
   @override
   void initState() {
     super.initState();
@@ -106,22 +108,27 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..translate(offset.dx, offset.dy)
-        ..scale(scale, scale),
-      child: Listener(
-        onPointerUp: _onPointerUp,
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          onDoubleTap: _onDoubleTap,
-          onScaleStart: _onScaleStart,
-          onScaleUpdate: _onScaleUpdate,
-          onScaleEnd: _onScaleEnd,
-          child: widget.child,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        size = constraints.biggest;
+        return Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..translate(offset.dx, offset.dy)
+            ..scale(scale, scale),
+          child: Listener(
+            onPointerUp: _onPointerUp,
+            child: GestureDetector(
+              onTap: widget.onPressed,
+              onDoubleTap: _onDoubleTap,
+              onScaleStart: _onScaleStart,
+              onScaleUpdate: _onScaleUpdate,
+              onScaleEnd: _onScaleEnd,
+              child: widget.child,
+            ),
+          ),
+        );
+      }
     );
   }
 
@@ -235,7 +242,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
       offsetXIncrement *= (_maxDragOver - (-scaleOffsetX - offset.dx)) / _maxDragOver;
     }
     // 处理 Y 轴边界
-    double scaleOffsetY = (widget.height ?? context.size.height * scale - MediaQuery.of(context).size.height) / 2;
+    double scaleOffsetY = (widget.height ?? context.size.height * scale - size.height) / 2;
     if (scaleOffsetY <= 0) {
       offsetYIncrement = 0;
     } else if (offset.dy > scaleOffsetY) {
@@ -276,7 +283,7 @@ class _GestureZoomBoxState extends State<GestureZoomBox> with TickerProviderStat
       }
       // 处理 Y 轴边界
       double scaleOffsetY =
-          (widget.height ?? context.size.height * realScale - MediaQuery.of(context).size.height) / 2;
+          (widget.height ?? context.size.height * realScale - size.height) / 2;
       if (scaleOffsetY < 0) {
         targetOffsetY = 0;
       } else if (offset.dy > scaleOffsetY) {
