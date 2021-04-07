@@ -33,6 +33,7 @@ class GestureZoomBox extends StatefulWidget {
   final Duration duration;
   final Function(Offset) onOffsetChange;
   final Function(double) onScale;
+  final ScrollController scrollController;
 
   /// 通过最大缩放比例 [maxScale]、双击缩放比例 [doubleTapScale]、子部件 [child]、点击事件 [onPressed] 创建小部件
   const GestureZoomBox({
@@ -47,6 +48,7 @@ class GestureZoomBox extends StatefulWidget {
     this.width,
     this.height,
     this.onScale,
+    this.scrollController,
     this.duration = const Duration(milliseconds: 200),
   })  : assert(maxScale >= 1.0),
         assert(doubleTapScale >= 1.0 && doubleTapScale <= maxScale),

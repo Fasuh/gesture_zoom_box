@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gesture_zoom_box_demo/big_image_page.dart';
+import 'package:gesture_zoom_box_demo/big_list_page.dart';
 
 void main() => runApp(MyApp());
 
@@ -37,6 +38,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => BigImagePage()));
               },
               child: Text("Zoom Image"),
+            ),
+            RaisedButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => BigListPage()));
+              },
+              child: Text("Zoom list"),
             ),
           ],
         ),
